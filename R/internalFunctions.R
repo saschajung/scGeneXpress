@@ -247,6 +247,7 @@ GetBimodalGenes <- function(runi,data_norm,dir_name,file.id,metadata,sample_n,nc
 #' @author Céline Barlier
 RunBootstrap <- function(data_norm,dir_name,file.id,clusterids_vec,metadata,sample_n,parallelize,ncores,num.boot.sample,fixseed){
 
+  data_norm <- t(data_norm) #This is needed for the memory-efficient sampling approach!
   #Prepare cluster & core for the parallelization
   if(parallelize){
     tictoc::tic("Preparing parallel running")
@@ -329,13 +330,20 @@ RunBackComputations <- function(norm.data,cell_clusterid_mat,sf,ncells.sample,cl
 #' @author Sascha Jung, Céline Barlier
 SampleBackground <- function(norm.data,cell_clusterid_mat,ncells.sample,clusterids_vec,file.id){
 
-  norm.data <- t(norm.data)
-  m2<-summary(norm.data)
-  norm.data.list<-split(m2$x,colnames(norm.data)[m2$j])
-
-  norm.data.list <- lapply(norm.data.list,function(x){
-    sample(x,ncells.sample,replace = T)
+  #In contrast to the previous version (below), this assumes that the data is already transposed!
+  norm.data.list <- list()
+  norm.data.list <- lapply(2:length(norm.data@p),function(i){
+    sample(norm.data@x[(norm.data@p[i-1]+1):norm.data@p[i]],ncells.sample,replace = T)
   })
+  names(norm.data.list) <- colnames(norm.data)
+	
+  #norm.data <- t(norm.data)
+  #m2<-summary(norm.data)
+  #norm.data.list<-split(m2$x,colnames(norm.data)[m2$j])
+
+  #norm.data.list <- lapply(norm.data.list,function(x){
+  #  sample(x,ncells.sample,replace = T)
+  #})
 
   return(norm.data.list)
 }
