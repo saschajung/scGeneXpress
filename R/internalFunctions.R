@@ -668,6 +668,9 @@ get.identity.genes <- function(tbl,bimodg){
 #' @return normalized data
 DataNorm<-function(data,log_transform=c(TRUE,FALSE),cell.attr,scale_factor = NA,data.type,bg.model.pars=NULL,file.id=NULL){
   if(data.type == "Ref"){
+    if(file.exists(paste0("./Ref_",file.id,"/",file.id,"_bg_model_pars.rds"))){
+      vst.out <- readRDS(paste0("./Ref_",file.id,"/",file.id,"_bg_model_pars.rds"))
+    }else{
     vst.out <-sctransform::vst(umi = data,
                                return_corrected_umi = FALSE,
                                n_genes=NULL,
@@ -679,6 +682,7 @@ DataNorm<-function(data,log_transform=c(TRUE,FALSE),cell.attr,scale_factor = NA,
                                vst.flavor = "v2",
                                residual_type = "none")
     saveRDS(object = vst.out,file = paste0("./Ref_",file.id,"/",file.id,"_bg_model_pars.rds"))
+    }
     cell.attr <- vst.out$cell_attr
   }else if(data.type == "query"){
     vst.out <- bg.model.pars
