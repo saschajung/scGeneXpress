@@ -251,7 +251,7 @@ RunBootstrap <- function(data_norm,dir_name,file.id,clusterids_vec,metadata,samp
   #Prepare cluster & core for the parallelization
   if(parallelize){
     tictoc::tic("Preparing parallel running")
-    cl = makePSOCKcluster(ncores, outfile="")
+    cl = makeForkCluster(ncores, outfile="")
     registerDoParallel(cl)
     tictoc::toc()
   }
