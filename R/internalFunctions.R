@@ -121,6 +121,9 @@ GetBackground <- function(data_norm,dir_name,file.id,metadata,sample_n,paralleli
   data_norm <- sparseMatrix(i=sData[,1], j=sData[,2], x=sData[,3],
                             dimnames = list(rnames,cnames))
 
+  rm(sData) #This thing is huuuuuuuuge, remove it again
+  rm(sf)
+  invisible(gc())
   #Run bootstrapping of the: (sampling, scaling, thresholds computation) & get the resulting background thresholds
   back.thrs.ecdfs <- RunBootstrap(data_norm = data_norm,dir_name = dir_name,file.id = file.id,clusterids_vec = clusterids_vec,metadata = metadata,sample_n = sample_n,parallelize=parallelize,ncores=ncores,num.boot.sample = num.boot.sample, fixseed = fixseed)
 
@@ -226,7 +229,7 @@ GetBimodalGenes <- function(runi,data_norm,dir_name,file.id,metadata,sample_n,nc
   #saveRDS(names(lg),paste0(dir_name,"/",file.id,"_bimodGenes_",runi,".rds"))
 
   #Clean memory
-  gc()
+  invisible(gc())
 
   return(names(lg))
 }
@@ -251,7 +254,8 @@ RunBootstrap <- function(data_norm,dir_name,file.id,clusterids_vec,metadata,samp
   #Prepare cluster & core for the parallelization
   if(parallelize){
     tictoc::tic("Preparing parallel running")
-    cl = makeForkCluster(ncores, outfile="")
+    unregister_dopar()
+    cl = makePSOCKcluster(ncores, outfile="")
     registerDoParallel(cl)
     tictoc::toc()
   }
@@ -282,6 +286,8 @@ RunBootstrap <- function(data_norm,dir_name,file.id,clusterids_vec,metadata,samp
     gthrs <- do.call("rbind",lapply(X = 1:length(th_list),FUN = function(a){
       return(th_list[[a]][[n]])
     }))
+    colnames(gthrs) <- c("Lower","Upper")
+    return(gthrs)
   })
   names(thrs_list) = names(th_list[[1]])
   close(bar)
@@ -289,6 +295,7 @@ RunBootstrap <- function(data_norm,dir_name,file.id,clusterids_vec,metadata,samp
 
   #Close clusters & clean env
   parallel::stopCluster(cl)
+  unregister_dopar()
 
   return(thrs_list)
 }
@@ -336,7 +343,7 @@ SampleBackground <- function(norm.data,cell_clusterid_mat,ncells.sample,clusteri
     sample(norm.data@x[(norm.data@p[i-1]+1):norm.data@p[i]],ncells.sample,replace = T)
   })
   names(norm.data.list) <- colnames(norm.data)
-	
+
   #norm.data <- t(norm.data)
   #m2<-summary(norm.data)
   #norm.data.list<-split(m2$x,colnames(norm.data)[m2$j])
@@ -376,7 +383,10 @@ GetThresholds <- function(processed.back,file.id){
   th_list = lapply(processed.back, function(pbx){
     createThresholdDist(pbx)
   })
+  th_list <- swap_th(th_list)
   names(th_list)=names(processed.back)
+
+
 
   return(th_list)
 }
@@ -916,17 +926,14 @@ minimizeRectangle <- function(empCDF,maxVal,minVal){
 #'
 #' @return thresolds
 swap_th<-function(th_dist){
-  mat=apply(th_dist,1,function(x){
+  th_dist=lapply(th_dist,function(x){
     if(x[1]>x[2]){
-      temp=x[1]
-      x[1]=x[2]
-      x[2]=temp
-      return(c(x[1],x[2]))
+      return(c(x[2],x[1]))
     }else{
       return(c(x[1],x[2]))
     }
   })
-  return(t(mat))
+  return(th_dist)
 }
 
 #' Generate threshold distributions
@@ -944,12 +951,12 @@ createThresholdDist <- function(gexp,swap=TRUE){
   }else{
     thrs<-minimizeRectangle(ecdf(gexp),max(gexp,na.rm=T),min(gexp,na.rm=T))
   }
-  thrsdf <- data.frame("Lower"=thrs[1],"Upper"=thrs[2])
+  #thrsdf <- data.frame("Lower"=thrs[1],"Upper"=thrs[2])
   #Define lower gexp value to be lower-threshold and higher gexp to be upper-threshold
-  if(swap){
-    thrsdf=swap_th(thrsdf)
-  }
-  return(thrsdf)
+  #if(swap){
+  #  thrsdf=swap_th(thrsdf)
+  #}
+  return(thrs)
 }
 
 #' Generate ecdf function for each gene
@@ -1028,5 +1035,15 @@ classify<-function(sig_vals,th,th_i){
   }
   close(bar)
   return(discrete_exp)
+}
+
+#' Unregister dopar cluster
+#'
+#' @description Implemented using the proposal in https://stackoverflow.com/questions/25097729/un-register-a-doparallel-cluster
+#' @return NULL
+#' @author Steve Weston
+unregister_dopar <- function() {
+  env <- foreach:::.foreachGlobals
+  rm(list=ls(name=env), pos=env)
 }
 

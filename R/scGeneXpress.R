@@ -93,6 +93,8 @@ run_scGeneXpress <- function(data,metadata,org="human",dir,file.name,precBack=NA
       if(!base::file.exists(base::paste0("./Ref_",file.name,"/",file.name,"_NormData.rds"))){
         clean.data <- base::suppressWarnings(cleanData(data_counts = dataBack,dir.name=base::paste(dir,paste("/Ref_",file.name,sep=""),sep=""),file.id = file.name))
         norm.data <- base::suppressWarnings(scrb_norm(data_counts = clean.data$Counts,file.id = file.name,data.type = "Ref",saveData = T,return = T))
+        rm(clean.data)
+        invisible(gc())
       }else{
         norm.data <- base::readRDS(base::paste0("./Ref_",file.name,"/",file.name,"_NormData.rds"))
       }
