@@ -10,7 +10,7 @@ The gene quantification algorithm is a single-cell adaptation of RefBool [1] whi
 # Guidelines
 
 
-## Install HCellig
+## Install scGeneXpress
 
 ```{r}
 #Install devtools
