@@ -8,6 +8,7 @@
 #' @param precBack precompiled background path to ScRbRef
 #' @param discretize gene quantification in three levels of cell types
 #' @param sig.frames construction of significant genes data frame
+#' @param num.boot.sample number of bootstrap-samples for creating threshold distributions
 #' @param ncores number of cores to use to run the code
 #' @param fixseed seed used to discretize cell types (reproducbility)
 #'
@@ -31,7 +32,7 @@
 #'
 #' @return NULL, all results are accessible in the dir specified
 #' @author Céline Barlier, Sascha Jung
-run_scGeneXpress <- function(data,metadata,org="human",dir,file.name,precBack=NA,discretize=TRUE,sig.frames=TRUE,ncores=detectCores()-2,fixseed=1234){
+run_scGeneXpress <- function(data,metadata,org="human",dir,file.name,precBack=NA,discretize=TRUE,sig.frames=TRUE,num.boot.sample=1000,ncores=detectCores()-2,fixseed=1234){
 
   if(base::endsWith(dir,"/")){
     dir <- base::substr(dir, 1, base::nchar(dir)-1)
@@ -101,7 +102,7 @@ run_scGeneXpress <- function(data,metadata,org="human",dir,file.name,precBack=NA
 
       #Sampling, scaling & getting background thresholds
       if(!file.exists(paste0("./Ref_",file.name,"/",file.name,"_th_dist.rds"))){
-        thrs.data <- GetBackground(data_norm=norm.data,dir_name=base::paste0(dir,"/Ref_",file.name),file.id=file.name,metadata=metadataBack,sample_n = 100,parallelize=T,ncores=ncores,num.boot.sample = 1000,fixseed = fixseed)
+        thrs.data <- GetBackground(data_norm=norm.data,dir_name=base::paste0(dir,"/Ref_",file.name),file.id=file.name,metadata=metadataBack,sample_n = 100,parallelize=T,ncores=ncores,num.boot.sample = num.boot.sample,fixseed = fixseed)
       }else{
         thrs.data <- readRDS(paste0("./Ref_",file.name,"/",file.name,"_th_dist.rds"))
       }
